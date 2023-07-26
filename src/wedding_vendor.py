@@ -1,5 +1,6 @@
 import os
 import time
+from collections import namedtuple
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.chrome.service import Service
@@ -7,9 +8,47 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
 
+VendorTuple = namedtuple("Vendor",
+                         ['name',
+                         'type',
+                         'city',
+                         'state',
+                         'price',
+                         'num_reviews',
+                         'rating',
+                         'link'])
+
+# Creating these getter functions in case
+# want to add more functionality
+class Vendor(VendorTuple):
+    def get_name(self):
+        return self.name
+    
+    def get_type(self):
+        return self.type
+
+    def get_city(self):
+        return self.city
+
+    def get_state(self):
+        return self.state
+
+    def get_price(self):
+        return self.price
+
+    def get_num_reviews(self):
+        return self.num_reviews
+    
+    def get_link(self):
+        return self.link
+
 class VendorCategory:
-    def __init__(self):
-        self._url                             = ""
+    """
+    This class is meant to store each individual's vendor info that is 
+    scraped from the Wedding Wire.
+    """
+    def __init__(self, webdriver, url):
+        self._url                             = url
         self._type                            = ""
         self._city                            = ""
         self._driver                          = None
@@ -36,6 +75,17 @@ class VendorCategory:
     def vendor():
         print("")
 
+def init_chromedriver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chromedir = f"{os.path.curdir}/chromedriver/stable/chromedriver"
+    driver_service = Service(chromedir)
+    driver = webdriver.Chrome(service=driver_service,
+                              options=chrome_options)
+    return driver
 
-v = VendorCategory()
+webdriver = init_chromedriver()
+url = ""
+v = VendorCategory(webdriver, url)
 print(v)
