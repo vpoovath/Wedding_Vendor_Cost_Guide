@@ -109,7 +109,7 @@ def find_vendors():
                 vendor_subtitle    = vendor.find('div', class_=vendor_subtitle_class)
                 vendor_rating      = vendor_subtitle.find('span', class_=vendor_rating_class).text.strip()
                 vendor_num_reviews = vendor_subtitle.find('div',
-                                        class_=vendor_num_reviews_class).text.replace(" ", "").split("(")[-1].split(")")[0]
+                                                          class_=vendor_num_reviews_class).text.replace(" ", "").split("(")[-1].split(")")[0]
             except Exception as e:
                 vendor_rating = "Null"
                 vendor_num_reviews = "Null"

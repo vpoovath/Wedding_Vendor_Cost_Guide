@@ -18,6 +18,7 @@ VendorTuple = namedtuple("Vendor",
                          'rating',
                          'link'])
 
+# TODO: Delete these if you're still using a namedtuple to store vendor data
 # Creating these getter functions in case
 # want to add more functionality
 class Vendor(VendorTuple):

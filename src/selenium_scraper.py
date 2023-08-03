@@ -9,6 +9,7 @@
 
 import os
 import time
+import csv
 from collections import namedtuple
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
@@ -272,7 +273,7 @@ def get_vendors(drivers, webpage):
     while (len(vendors) < num_results):
         driver.get(webpage)
         try: 
-            temp_vendors = [v for v in driver.find_elements(By.CLASS_NAME, vendor_class)]
+            temp_vendors = [get_vendor_data(v) for v in driver.find_elements(By.CLASS_NAME, vendor_class)]
             vendors.extend(temp_vendors)
             webpage = get_next_page(driver) # If there is a 'Next' page, then grab it
         except Exception as e:
@@ -281,8 +282,111 @@ def get_vendors(drivers, webpage):
             break
     return vendors
 
-def get_vendor_data(vendors):
+def get_vendor_name(vendor):
     """
+    @param:
+    @return:
+    """
+    vendor_name_class = "vendorTile__title.app-vendor-tile-link"
+    try:
+        name = vendor.find_element(By.CLASS_NAME, vendor_name_class).text.strip()
+    except Exception as e:
+        name = None
+        print(e)
+    return name
+
+# TODO: TBD on implementation
+def get_vendor_type(vendor):
+    """
+    @param:
+
+    @return:
+    """
+    vend_type = ""
+    return vend_type
+
+# TODO: TBD on implementation
+def get_vendor_city(vendor):
+    """
+    @param:
+
+    @return:
+    """
+    city = ""
+    return city
+
+# TODO: TBD on implementation
+def get_vendor_state(vendor):
+    """
+    @param:
+
+    @return:
+    """
+    state = ""
+    return state
+
+# TODO: Implement some cleaning on the price field either in
+# separate function or separate preprocessing script
+def get_vendor_price(vendor):
+    """
+    @param:
+
+    @return:
+    """
+    vendor_price_class = "vendorTileFooter__info"
+    try:
+        vendor_price = vendor.find_element(By.CLASS_NAME, vendor_price_class).text.strip()
+    except Exception as e:
+        vendor_price = "Null"
+    return vendor_price
+
+def get_vendor_rating(vendor):
+    """
+    @param:
+
+    @return:
+    """
+    vendor_subtitle_class = "vendorTile__subtitle.link-marker"
+    vendor_rating_class   = "vendorTile__rating"
+    try:
+        subtitle = vendor.find_element(By.CLASS_NAME, vendor_subtitle_class)
+        rating   = subtitle.find_element(By.CLASS_NAME, vendor_rating_class).text.strip()
+    except Exception as e:
+        rating = None
+    return rating
+
+def get_vendor_num_reviews(vendor):
+    """
+    @param:
+
+    @return:
+    """
+    vendor_subtitle_class    = "vendorTile__subtitle.link-marker"
+    vendor_num_reviews_class = "vendorTile__contentRating"
+    try:
+        subtitle    = vendor.find_element(By.CLASS_NAME, vendor_subtitle_class)
+        num_reviews = subtitle.find_element(By.CLASS_NAME, vendor_num_reviews_class).text.replace(" ", "").split("(")[-1].split(")")[0]
+    except Exception as e:
+        num_reviews = None
+    return num_reviews
+
+# @TODO: Implement 
+def get_vendor_link(vendor):
+    """
+    @param:
+
+    @return:
+    """
+    link = ""
+    return link
+
+def get_vendor_data(vendor):
+    """
+    @param: vendor = A Selenium WebElement type in which we can search for specific data and attributes
+                     by class, tag type, XPATH, etc.
+
+    @return: A VendorTuple (namedtuple) that contains the vendor's name, type, city, state, price, 
+             the no. of reviews, and website link.
     """
     # The By.CLASS_NAME uses By.CSS_SELECTOR internally and therefore needs to have "." 
     # where there are spaces (" ") - which we see when we "Inspect" elements in Chrome.
@@ -295,8 +399,35 @@ def get_vendor_data(vendors):
     vendor_subtitle_class    = "vendorTile__subtitle.link-marker"
     vendor_num_reviews_class = "vendorTile__contentRating"
     vendor_rating_class      = "vendorTile__rating"
-    vendor_data = namedtuple("Vendors", ['name', 'price', 'subtitle'])
-    return vendor_data
+    # TODO: Extend this into a class in wedding_vendor.py file
+    VendorTuple = namedtuple("Vendor",
+                             ['name',
+                             'type',
+                             'city',
+                             'state',
+                             'price',
+                             'num_reviews',
+                             'rating',
+                             'link'])
+    name = get_vendor_name(vendor)
+    type = get_vendor_type(vendor)
+    city = get_vendor_city(vendor)
+    state = get_vendor_state(vendor)
+    price = get_vendor_price(vendor)
+    num_reviews = get_vendor_num_reviews(vendor)
+    rating = get_vendor_rating(vendor)
+    link = get_vendor_link(vendor)
+
+    vend_tup=VendorTuple(name,
+                         type,
+                         city,
+                         state,
+                         price,
+                         num_reviews,
+                         rating,
+                         link)
+
+    return vend_tup
 
 # We want to use these four cities to practice making a small dataset
 # Then once we feel confident that for each vendor we are able to scrape
@@ -321,10 +452,16 @@ vendors = get_vendors(driver, satx_href)
 num_results = get_num_search_results(driver)
 print("No. Search Results: {a}".format(a=num_results))
 print("No. Vendors: {a}".format(a=len(vendors)))
-print("\nLast Vendor in the List Info:")
-vendor_name_class = "vendorTile__title.app-vendor-tile-link"
-last_vendor_name = vendors[-1].find_element(By.CLASS_NAME, vendor_name_class)
-print(last_vendor_name.text)
+
+temp_vendor = vendors[0]
+print("Vendor Name: {}".format(temp_vendor.name))
+print("Vendor Type: {}".format(temp_vendor.type))
+print("Vendor City: {}".format(temp_vendor.city))
+print("Vendor State: {}".format(temp_vendor.state))
+print("Vendor Price: {}".format(temp_vendor.price))
+print("Vendor Rating: {}".format(temp_vendor.rating))
+print("Vendor No. Reviews: {}".format(temp_vendor.num_reviews))
+print("Vendor Link: {}".format(temp_vendor.link))
 #######################################################################################################################
 
 teardown_webdriver(driver)
