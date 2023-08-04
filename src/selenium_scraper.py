@@ -105,11 +105,9 @@ url2 = "https://www.weddingwire.com/"
 #    print(vendor_type)
 #    print(vendor_link)
 
-def setup_webdriver():
+def setup_webdriver(url="https://www.weddingwire.com/"):
     """
     """
-    url2 = "https://www.weddingwire.com/"
-
     # Adding optinos to prevent a Google Chrome window from popping up
     chrome_options = Options()
     chrome_options.add_argument("--headless")
@@ -119,7 +117,7 @@ def setup_webdriver():
     driver_service = Service(chromedir)
     driver         = webdriver.Chrome(service=driver_service, options=chrome_options)
 
-    driver.get(url2)
+    driver.get(url)
 
     return driver
 
@@ -169,6 +167,7 @@ def get_vendor_categories(driver):
         vendor_category = vend_cat.find_element(By.TAG_NAME, "a")
         vendor_type = vendor_category.get_attribute("data-placeholder-name")
         vendor_link = vendor_category.get_attribute("href")
+        vendor_categories.append((vendor_type, vendor_link))
 
     return vendor_categories
 
@@ -208,7 +207,6 @@ def get_city_href(location_dropdown_list, city_name):
 
 def get_next_page(driver):
     """
-
     @param: driver - Selenium WebDriver element.
 
     @return: <str> - A string that contents the URL/HREF to the next page.
@@ -260,7 +258,7 @@ def get_num_search_results(driver):
     num_results = int(driver.find_element(By.CLASS_NAME, num_results_class).get_attribute("data-num-results"))
     return num_results
 
-def get_vendors(drivers, webpage):
+def get_vendors(drivers, webpage, vendor_type=None):
     """
     """
     # TODO: Create this into a class/subclass
@@ -270,10 +268,11 @@ def get_vendors(drivers, webpage):
     driver.get(webpage)
     num_results = get_num_search_results(driver)
 
-    while (len(vendors) < num_results):
+    #while (len(vendors) < num_results):
+    while(webpage):
         driver.get(webpage)
         try: 
-            temp_vendors = [get_vendor_data(v) for v in driver.find_elements(By.CLASS_NAME, vendor_class)]
+            temp_vendors = [get_vendor_data(v, vendor_type) for v in driver.find_elements(By.CLASS_NAME, vendor_class)]
             vendors.extend(temp_vendors)
             webpage = get_next_page(driver) # If there is a 'Next' page, then grab it
         except Exception as e:
@@ -295,38 +294,30 @@ def get_vendor_name(vendor):
         print(e)
     return name
 
-# TODO: TBD on implementation
-def get_vendor_type(vendor):
-    """
-    @param:
-
-    @return:
-    """
-    vend_type = ""
-    return vend_type
-
-# TODO: TBD on implementation
 def get_vendor_city(vendor):
     """
     @param:
 
     @return:
     """
-    city = ""
+    vendor_name_class = "vendorTile__location"
+    city = vendor.find_element(By.CLASS_NAME, vendor_name_class).text.strip().split(",")[0]
+    city = city.replace("·", "").strip()
     return city
 
-# TODO: TBD on implementation
 def get_vendor_state(vendor):
     """
     @param:
 
     @return:
     """
-    state = ""
+    vendor_name_class = "vendorTile__location"
+    state = vendor.find_element(By.CLASS_NAME, vendor_name_class).text.strip().split(",")[1]
+    state = state.strip()
     return state
 
-# TODO: Implement some cleaning on the price field either in
-# separate function or separate preprocessing script
+# TODO: Implement some cleaning on the price field either in separate function 
+#       OR separate preprocessing script
 def get_vendor_price(vendor):
     """
     @param:
@@ -370,17 +361,22 @@ def get_vendor_num_reviews(vendor):
         num_reviews = None
     return num_reviews
 
-# @TODO: Implement 
 def get_vendor_link(vendor):
     """
     @param:
 
     @return:
     """
-    link = ""
+    vendor_name_class = "vendorTile__title.app-vendor-tile-link"
+    try:
+        name = vendor.find_element(By.CLASS_NAME, vendor_name_class)
+        link = name.get_attribute("href")
+    except Exception as e:
+        link = ""
+        print(e)
     return link
 
-def get_vendor_data(vendor):
+def get_vendor_data(vendor, vendor_type=None):
     """
     @param: vendor = A Selenium WebElement type in which we can search for specific data and attributes
                      by class, tag type, XPATH, etc.
@@ -388,17 +384,6 @@ def get_vendor_data(vendor):
     @return: A VendorTuple (namedtuple) that contains the vendor's name, type, city, state, price, 
              the no. of reviews, and website link.
     """
-    # The By.CLASS_NAME uses By.CSS_SELECTOR internally and therefore needs to have "." 
-    # where there are spaces (" ") - which we see when we "Inspect" elements in Chrome.
-    # Need valid CSS selector for an element that includes all those classes (i.e.
-    # separated by spaces).  Must "concatenate" them with "."
-    # To fix: Simply replace the spaces between the classes with "."
-    vendor_class             = "vendorTile__content.vendorTileQuickResponse__content"
-    vendor_name_class        = "vendorTile__title.app-vendor-tile-link"
-    vendor_price_class       = "vendorTileFooter__info"
-    vendor_subtitle_class    = "vendorTile__subtitle.link-marker"
-    vendor_num_reviews_class = "vendorTile__contentRating"
-    vendor_rating_class      = "vendorTile__rating"
     # TODO: Extend this into a class in wedding_vendor.py file
     VendorTuple = namedtuple("Vendor",
                              ['name',
@@ -409,8 +394,8 @@ def get_vendor_data(vendor):
                              'num_reviews',
                              'rating',
                              'link'])
+    type = vendor_type
     name = get_vendor_name(vendor)
-    type = get_vendor_type(vendor)
     city = get_vendor_city(vendor)
     state = get_vendor_state(vendor)
     price = get_vendor_price(vendor)
@@ -440,60 +425,59 @@ def get_vendor_data(vendor):
 # category at each city...
 driver = setup_webdriver()
 
-# San Antonio Wedding Venues
-city_name = "San Antonio"
-location_dropdown_list = get_location_dropdown_list(driver)
-satx_href = get_city_href(location_dropdown_list, city_name)
-vendors = get_vendors(driver, satx_href)
+# Use Wedding Venues as the test category. First we grab the name and href and then go to the
+# website for the Wedding Venues search bar.
+vendor_categories = get_vendor_categories(driver)
+
+for vendor_cat in vendor_categories:
+    vendor_cat_name = vendor_cat[0]
+    vendor_cat_link = vendor_cat[1]
+    driver.get(vendor_cat_link)
+
+    #num_results = get_num_search_results(driver)
+    city_name = "San Antonio" # TODO: Make this into a data field called "nearest_metro"
+
+    location_dropdown_list = get_location_dropdown_list(driver)
+    satx_href = get_city_href(location_dropdown_list, city_name)
+    vendors = get_vendors(driver, satx_href, vendor_cat_name)
+
+    # TODO: Add in a timestamp to the filename for differentiation
+    csv_filename = "{}_test.csv".format(vendor_cat_name)
+
+    # TODO: Delete this when in production, keep all files and differentiate them with a timestamp
+    if os.path.exists(csv_filename):
+        os.remove(csv_filename)
+
+    with open(csv_filename, 'w') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerow(list(vendors[0]._fields)) # All vendors are namedtuples with same fields
+
+    with open(csv_filename, 'a') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        for vendor in vendors:
+            csvwriter.writerow([data for data in vendor])
+    
+    print(vendor_cat_name)
+
+teardown_webdriver(driver)
 
 # TODO: Delete
 #######################################################################################################################
 # Quick check
-num_results = get_num_search_results(driver)
-print("No. Search Results: {a}".format(a=num_results))
-print("No. Vendors: {a}".format(a=len(vendors)))
+#print(vendor_categories)
+#print("No. Search Results: {a}".format(a=num_results))
+#print("No. Vendors: {a}".format(a=len(vendors)))
+#
+#temp_vendor = vendors[0]
+#print("Vendor Name: {}".format(temp_vendor.name))
+#print("Vendor Type: {}".format(temp_vendor.type))
+#print("Vendor City: {}".format(temp_vendor.city))
+#print("Vendor State: {}".format(temp_vendor.state))
+#print("Vendor Price: {}".format(temp_vendor.price))
+#print("Vendor Rating: {}".format(temp_vendor.rating))
+#print("Vendor No. Reviews: {}".format(temp_vendor.num_reviews))
+#print("Vendor Link: {}".format(temp_vendor.link))
 
-temp_vendor = vendors[0]
-print("Vendor Name: {}".format(temp_vendor.name))
-print("Vendor Type: {}".format(temp_vendor.type))
-print("Vendor City: {}".format(temp_vendor.city))
-print("Vendor State: {}".format(temp_vendor.state))
-print("Vendor Price: {}".format(temp_vendor.price))
-print("Vendor Rating: {}".format(temp_vendor.rating))
-print("Vendor No. Reviews: {}".format(temp_vendor.num_reviews))
-print("Vendor Link: {}".format(temp_vendor.link))
-#######################################################################################################################
-
-teardown_webdriver(driver)
-
-#for i, vendor in vendors:
-    #
-    #try:
-    #    vendor_name = vendor.find_element(By.CLASS_NAME, vendor_name_class)
-    #except NoSuchElementException as e:
-    #    vendor_name = None
-    #try:
-    #    vendor_price = vendor.find_element(By.CLASS_NAME, vendor_price_class)
-    #except NoSuchElementException as e:
-    #    vendor_price = None
-    #
-    #try:
-    #    vendor_subtitle = vendor.find_element(By.CLASS_NAME, vendor_subtitle_class)
-    #except NoSuchElementException as e:
-    #    vendor_subtitle = None
-    #
-    #try: 
-    #    vendor_rating = vendor_subtitle.find_element(By.CLASS_NAME, vendor_rating_class).text.strip()
-    #except NoSuchElementException as e:
-    #    vendor_rating = None
-    #
-    #vendor_num_reviews = vendor_subtitle.text.split("\n")[1].replace(")", "").replace("(","")
-    #
-    #print(satx_href)
-    #print(vendor_name.text)
-    #print(vendor_price.text)
-    #print(vendor_rating)
-    #print(vendor_num_reviews)
 
 ## Dallas
 #print("\n")
@@ -577,5 +561,3 @@ teardown_webdriver(driver)
 #    vendor_subttile = None
 #
 #print("End of Selenium Scraper")
-
-driver.quit()
